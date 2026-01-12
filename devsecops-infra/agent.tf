@@ -83,9 +83,9 @@ resource "azurerm_linux_virtual_machine" "agent_vm" {
               # Create agent directory
               mkdir /myagent && cd /myagent
               
-              # Download Agent (version 3.246.0)
-              wget https://vstsagentpackage.azureedge.net/agent/3.246.0/vsts-agent-linux-x64-3.246.0.tar.gz
-              tar zxvf vsts-agent-linux-x64-3.246.0.tar.gz
+              # Download Agent (version 4.266.2)
+              wget https://download.agent.dev.azure.com/agent/4.266.2/pipelines-agent-linux-x64-4.266.2.tar.gz
+              tar zxvf pipelines-agent-linux-x64-4.266.2.tar.gz
 
               # Allow agent to run as root (for simplicity in demo) or create user
               export AGENT_ALLOW_RUNASROOT="1"
