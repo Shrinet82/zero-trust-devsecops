@@ -60,8 +60,12 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
               # Install Azure CLI
               curl -sL https://aka.ms/InstallAzureCLIDeb | bash
               
-              # Install Kubelogin & Kubectl (Required for AAD AKS)
-              az aks install-cli
+              # Install Kubelogin (Direct Download)
+              apt-get install -y unzip
+              wget https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip -O kubelogin.zip
+              unzip kubelogin.zip
+              mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
+              chmod +x /usr/local/bin/kubelogin
               EOF
   )
 
