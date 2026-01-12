@@ -631,14 +631,41 @@ _Azure Policy (Gatekeeper) blocking a privileged container attempt - proof of Ze
 
 ---
 
-### Additional Screenshots (To Be Added)
+### Azure Infrastructure
 
-| #   | Description              | Status     |
-| --- | ------------------------ | ---------- |
-| 1   | AKS Cluster Overview     | 🔜 Pending |
-| 2   | Key Vault Secrets        | 🔜 Pending |
-| 3   | Azure Policy Assignments | 🔜 Pending |
-| 4   | Defender for Cloud       | 🔜 Pending |
+#### AKS Cluster Overview
+
+_Production Kubernetes cluster with Workload Identity, Azure CNI, and managed by Terraform:_
+
+![AKS Overview](docs/screenshots/aks-overview.png)
+
+#### Key Vault Secrets
+
+_Secrets stored securely in Azure Key Vault - `AppApiKey` is injected into pods via CSI Driver:_
+
+![Key Vault Secrets](docs/screenshots/keyvault-secrets.png)
+
+---
+
+### Governance & Compliance
+
+#### Azure Policy Overview
+
+_Dashboard showing policy compliance across the subscription:_
+
+![Azure Policy Overview](docs/screenshots/azure-policy-overview.png)
+
+#### Pod Security Policy Assignment
+
+_The "Restricted" Pod Security Standards initiative assigned to block privileged containers:_
+
+![Policy Assignment](docs/screenshots/policy-assignment.png)
+
+#### Microsoft Defender for Cloud
+
+_Runtime security monitoring and threat detection dashboard:_
+
+![Defender for Cloud](docs/screenshots/defender-for-cloud.png)
 
 ---
 
