@@ -18,31 +18,40 @@ stages:
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - task: Docker@2
-            displayName: "Build Docker Image"
+          - task: AzureCLI@2
+            displayName: "Build and Log into ACR"
             inputs:
-              command: "build"
-              repository: $(imageRepository)
-              dockerfile: $(dockerfilePath)
-              containerRegistry: $(azureServiceConnection)
-              tags: |
-                $(tag)
-                latest
+              azureSubscription: $(azureServiceConnection)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                # 1. Login to ACR using the OIDC Identity
+                az acr login --name $(azureContainerRegistry)
 
+                # 2. Build the Docker Image
+                docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) -f $(dockerfilePath) .
+                docker tag $(azureContainerRegistry)/$(imageRepository):$(tag) $(azureContainerRegistry)/$(imageRepository):latest
+
+          # STRICT: Vulnerability Scan before pushing to Registry
           - script: |
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
               ./trivy image --exit-code 1 --severity HIGH,CRITICAL $(azureContainerRegistry)/$(imageRepository):$(tag)
             displayName: "Trivy Security Scan (Kill Logic)"
 
-          - task: Docker@2
+          # Only push if the security scan passes
+          - task: AzureCLI@2
             displayName: "Push to ACR"
             inputs:
-              command: "push"
-              repository: $(imageRepository)
-              containerRegistry: $(azureServiceConnection)
-              tags: |
-                $(tag)
-                latest
+              azureSubscription: $(azureServiceConnection)
+              scriptType: "bash"
+              scriptLocation: "inlineScript"
+              inlineScript: |
+                # 1. Login again (just to be safe/stateless)
+                az acr login --name $(azureContainerRegistry)
+
+                # 2. Push the images
+                docker push $(azureContainerRegistry)/$(imageRepository):$(tag)
+                docker push $(azureContainerRegistry)/$(imageRepository):latest
 
   - stage: DeployToAKS
     displayName: "CD Stage: Zero-Trust Deploy"
