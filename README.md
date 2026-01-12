@@ -10,6 +10,35 @@
 
 This project implements a complete CI/CD pipeline with integrated security scanning, secret management, and runtime protection. It serves as a reference architecture for organizations looking to adopt modern DevSecOps practices.
 
+## 🚀 Live Deployment Proof
+
+> **This is not just documentation — it's a running system.**
+
+| Metric                      | Value                                                                               | Status      |
+| --------------------------- | ----------------------------------------------------------------------------------- | ----------- |
+| **GitHub Repository**       | [Shrinet82/zero-trust-devsecops](https://github.com/Shrinet82/zero-trust-devsecops) | ✅ Live     |
+| **AKS Cluster FQDN**        | `aksdevsecops-fhh0yrdk.hcp.eastus.azmk8s.io`                                        | ✅ Running  |
+| **Kubernetes Version**      | 1.33                                                                                | ✅ Latest   |
+| **Pipeline Runs**           | 20+ builds                                                                          | ✅ Green    |
+| **Pods Running**            | 1/1 (sample-app)                                                                    | ✅ Healthy  |
+| **Secrets Injected**        | `AppApiKey` mounted via CSI                                                         | ✅ Verified |
+| **Vulnerabilities Blocked** | 0 CRITICAL/HIGH in prod                                                             | ✅ Clean    |
+| **Privileged Pods**         | BLOCKED by Policy                                                                   | ✅ Enforced |
+
+### Live kubectl Output
+
+```bash
+$ kubectl get all -o wide
+NAME                              READY   STATUS    RESTARTS   AGE
+pod/sample-app-6c555ddc5d-pj2z2   1/1     Running   0          153m
+
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/sample-app   1/1     1            1           4h12m
+
+$ kubectl exec deployment/sample-app -- cat /mnt/secrets-store/AppApiKey
+SUPER_SECRET_REMOTEROLE_KEY_2026
+```
+
 ---
 
 ## 📑 Table of Contents
@@ -326,6 +355,104 @@ graph TB
 | Infrastructure | HCL (Terraform)    | `devsecops-infra/*.tf` |
 | Pipeline       | YAML               | `azure-pipelines.yml`  |
 | Kubernetes     | YAML               | `k8s/*.yaml`           |
+
+---
+
+## 📦 Sample Application
+
+The project includes a production-ready Flask application demonstrating security best practices:
+
+### Application Code (`app/app.py`)
+
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return "Zero-Trust Azure DevSecOps Pipeline is Live!"
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
+```
+
+### Hardened Dockerfile (`app/Dockerfile`)
+
+```dockerfile
+# Use a slim, non-root image for a smaller attack surface
+FROM python:3.9-slim
+
+# Create a non-privileged user to run the app
+RUN useradd -m devopsuser
+USER devopsuser
+WORKDIR /home/devopsuser
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+> **Security Features**: Non-root user, slim base image, no cache for smaller attack surface.
+
+---
+
+## 🔄 Pipeline Code (`azure-pipelines.yml`)
+
+### CI Stage: Build, Scan, and Push
+
+```yaml
+stages:
+  - stage: BuildAndSecurityScan
+    displayName: "CI Stage: Build and Scan"
+    jobs:
+      - job: Build
+        pool:
+          name: "VMSS-Pool" # Self-hosted elastic agents
+        steps:
+          - task: AzureCLI@2
+            displayName: "Build and Push to ACR"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: "bash"
+              inlineScript: |
+                az acr login --name $(azureContainerRegistry)
+                docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) -f $(dockerfilePath) app/
+                docker push $(azureContainerRegistry)/$(imageRepository):$(tag)
+
+          # THE KILL LOGIC - Block vulnerable images
+          - script: |
+              trivy image --exit-code 1 --severity CRITICAL,HIGH \
+                $(azureContainerRegistry)/$(imageRepository):$(tag)
+            displayName: "Trivy Security Scan (Kill Logic)"
+```
+
+### CD Stage: Zero-Trust Deployment
+
+```yaml
+- stage: DeployToAKS
+  displayName: "CD Stage: Zero-Trust Deployment"
+  dependsOn: BuildAndSecurityScan
+  jobs:
+    - deployment: Deploy
+      environment: "production"
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: KubernetesManifest@0
+                inputs:
+                  kubernetesCluster: "aks-devsecops-prod"
+                  manifests: |
+                    k8s/secretproviderclass.yaml
+                    k8s/deployment.yaml
+                  containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
+```
+
+> **Full pipeline**: See [azure-pipelines.yml](azure-pipelines.yml) for complete configuration.
 
 ---
 
