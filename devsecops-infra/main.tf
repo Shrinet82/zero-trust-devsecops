@@ -60,6 +60,10 @@ resource "azurerm_kubernetes_cluster" "aks" {
     Environment = "Production"
     ManagedBy   = "Terraform"
   }
+
+  key_vault_secrets_provider {
+    secret_rotation_enabled = true
+  }
 }
 
 # 4. Create the Azure Key Vault with RBAC enabled
@@ -71,6 +75,21 @@ resource "azurerm_key_vault" "vault" {
   sku_name                  = "standard"
   enable_rbac_authorization = true  # STRICT: No more legacy Access Policies
   purge_protection_enabled  = false # Set to true for actual production
+}
+
+# 4.0.1 Permissions for Terraform Runner (Current User) to Create Secrets
+resource "azurerm_role_assignment" "tf_runner_kv_admin" {
+  principal_id         = "e8c5b62f-bd3d-42d0-81c2-4850ff3b3d8c" # Your User Object ID
+  role_definition_name = "Key Vault Secrets Officer"
+  scope                = azurerm_key_vault.vault.id
+}
+
+# 4.1 Create a Sample Secret for Verification
+resource "azurerm_key_vault_secret" "example" {
+  name         = "AppApiKey"
+  value        = "SUPER_SECRET_REMOTEROLE_KEY_2026"
+  key_vault_id = azurerm_key_vault.vault.id
+  depends_on   = [azurerm_role_assignment.tf_runner_kv_admin] # Wait for permission!
 }
 
 # 5. Role Assignment: Allow AKS to pull images from ACR
