@@ -591,26 +591,54 @@ az aks show -g rg-devsecops-prod -n aks-devsecops-prod \
 
 ## 📸 Screenshots
 
-> [!NOTE] > **Action Required**: Please provide the following screenshots to complete this documentation.
+### Pipeline Execution
 
-### Required Screenshots
+#### Pipeline Runs History
 
-| ID  | Description                      | Location in Azure Portal                     |
-| --- | -------------------------------- | -------------------------------------------- |
-| 1   | Pipeline Run (Both Stages Green) | Azure DevOps → Pipelines → Runs              |
-| 2   | Trivy Scan Output                | Pipeline Run → Build Stage → Trivy Scan Step |
-| 3   | AKS Cluster Overview             | Azure Portal → AKS → Overview                |
-| 4   | Key Vault Secrets                | Azure Portal → Key Vault → Secrets           |
-| 5   | Azure Policy Assignments         | Azure Portal → Policy → Assignments          |
-| 6   | Defender for Cloud Alerts        | Azure Portal → Defender for Cloud            |
-| 7   | Gatekeeper Denial Error          | Terminal output of privileged pod attempt    |
+_Shows multiple pipeline runs with successful and failed attempts during development:_
 
-### How to Take Screenshots
+![Pipeline Runs History](docs/screenshots/pipeline-runs-history.png)
 
-1. Navigate to the specified location
-2. Take a screenshot (Windows: `Win+Shift+S`, Linux: `gnome-screenshot`)
-3. Save to `docs/screenshots/` directory
-4. Name format: `screenshot-<id>-<description>.png`
+#### Successful Pipeline Run (Both Stages Green)
+
+_CI Stage (Build & Scan) and CD Stage (Zero-Trust Deploy) both completed successfully:_
+
+![Pipeline Success](docs/screenshots/pipeline-success.png)
+
+---
+
+### Security Scanning
+
+#### Trivy Vulnerability Scan Results
+
+_Container image scanned with zero vulnerabilities detected - the "Kill Logic" passes:_
+
+![Trivy Scan Part 1](docs/screenshots/trivy-scan-1.png)
+
+![Trivy Scan Part 2](docs/screenshots/trivy-scan-2.png)
+
+---
+
+### Policy Enforcement
+
+#### Gatekeeper Privileged Pod Denial
+
+_Azure Policy (Gatekeeper) blocking a privileged container attempt - proof of Zero-Trust enforcement:_
+
+![Gatekeeper Denial](docs/screenshots/gatekeeper-denial.png)
+
+> **Error Message**: `admission webhook "validation.gatekeeper.sh" denied the request: Privileged container is not allowed`
+
+---
+
+### Additional Screenshots (To Be Added)
+
+| #   | Description              | Status     |
+| --- | ------------------------ | ---------- |
+| 1   | AKS Cluster Overview     | 🔜 Pending |
+| 2   | Key Vault Secrets        | 🔜 Pending |
+| 3   | Azure Policy Assignments | 🔜 Pending |
+| 4   | Defender for Cloud       | 🔜 Pending |
 
 ---
 
