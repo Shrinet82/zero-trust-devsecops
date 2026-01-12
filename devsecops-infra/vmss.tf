@@ -60,12 +60,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
               # Install Azure CLI
               curl -sL https://aka.ms/InstallAzureCLIDeb | bash
               
-              # Install Kubelogin (Direct Download)
-              apt-get install -y unzip
-              wget https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip -O kubelogin.zip
-              unzip kubelogin.zip
-              mv bin/linux_amd64/kubelogin /usr/local/bin/kubelogin
-              chmod +x /usr/local/bin/kubelogin
+              # Install Kubelogin (Python Direct Download for Reliability)
+              python3 -c "import urllib.request, zipfile, os, stat, shutil; url = 'https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip'; urllib.request.urlretrieve(url, 'kubelogin.zip'); zipfile.ZipFile('kubelogin.zip', 'r').extractall('k_tmp'); shutil.move('k_tmp/bin/linux_amd64/kubelogin', '/usr/bin/kubelogin'); os.chmod('/usr/bin/kubelogin', 0o755)"
               EOF
   )
 
