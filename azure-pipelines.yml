@@ -72,7 +72,15 @@ stages:
                 - script: |
                     echo "Checking workspace contents:"
                     ls -R $(System.DefaultWorkingDirectory)
-                  displayName: "Debug: List Workspace"
+
+                    echo "Installing Kubelogin (Runtime)..."
+                    sudo curl -L https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip -o kubelogin.zip
+                    sudo apt-get install -y unzip
+                    sudo unzip -o kubelogin.zip
+                    sudo mv bin/linux_amd64/kubelogin /usr/bin/kubelogin
+                    sudo chmod +x /usr/bin/kubelogin
+                    kubelogin --version
+                  displayName: "Debug & Install Kubelogin"
                 - task: KubernetesManifest@1
                   displayName: "Apply Zero-Trust Manifests"
                   inputs:
