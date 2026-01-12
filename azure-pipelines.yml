@@ -112,5 +112,7 @@ stages:
                     azureSubscriptionConnection: $(azureServiceConnection)
                     azureResourceGroup: "rg-devsecops-prod"
                     kubernetesCluster: "aks-devsecops-prod"
-                    manifests: "k8s/deployment.yaml"
+                    manifests: |
+                      k8s/secretproviderclass.yaml
+                      k8s/deployment.yaml
                     containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
