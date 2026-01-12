@@ -2,13 +2,13 @@ trigger:
   - main
 
 variables:
-  # Replace with your ACR name from Step 2
+  # MUST MATCH YOUR TERRAFORM OUTPUT
   azureContainerRegistry: "acrshrinet82prod.azurecr.io"
   imageRepository: "devsecops-sample-app"
   dockerfilePath: "app/Dockerfile"
   tag: "$(Build.BuildId)"
-  # The Service Connection name from Step 1
-  azureServiceConnection: "Az-ZeroTrust-Svc"
+  # UPDATED TO MATCH YOUR ACTUAL CONNECTION NAME FROM SCREENSHOT
+  azureServiceConnection: "Azure-DevSecOps-Connection"
 
 stages:
   - stage: BuildAndSecurityScan
@@ -29,13 +29,11 @@ stages:
                 $(tag)
                 latest
 
-          # STRICT: Vulnerability Scan before pushing to Registry
           - script: |
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
               ./trivy image --exit-code 1 --severity HIGH,CRITICAL $(azureContainerRegistry)/$(imageRepository):$(tag)
-            displayName: "Trivy Security Scan (Fail on High/Critical)"
+            displayName: "Trivy Security Scan (Kill Logic)"
 
-          # Only push if the security scan passes
           - task: Docker@2
             displayName: "Push to ACR"
             inputs:
@@ -45,3 +43,29 @@ stages:
               tags: |
                 $(tag)
                 latest
+
+  - stage: DeployToAKS
+    displayName: "CD Stage: Zero-Trust Deploy"
+    # STRICT: Only run if CI stage succeeded
+    dependsOn: BuildAndSecurityScan
+    condition: succeeded()
+    jobs:
+      - deployment: Deploy
+        displayName: "Deploy to AKS"
+        environment: "Production"
+        pool:
+          vmImage: "ubuntu-latest"
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: KubernetesManifest@1
+                  displayName: "Apply Zero-Trust Manifests"
+                  inputs:
+                    action: "deploy"
+                    connectionType: "azureResourceManager"
+                    azureSubscriptionConnection: $(azureServiceConnection)
+                    azureResourceGroup: "rg-devsecops-prod"
+                    kubernetesCluster: "aks-devsecops-prod"
+                    manifests: "k8s/deployment.yaml"
+                    containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
