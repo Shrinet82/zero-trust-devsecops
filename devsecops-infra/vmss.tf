@@ -59,6 +59,9 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
               
               # Install Azure CLI
               curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+              
+              # Install Kubelogin & Kubectl (Required for AAD AKS)
+              az aks install-cli
               EOF
   )
 
