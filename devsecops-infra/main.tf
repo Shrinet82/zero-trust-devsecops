@@ -80,3 +80,11 @@ resource "azurerm_role_assignment" "acrpull" {
   scope                            = azurerm_container_registry.acr.id
   skip_service_principal_aad_check = true
 }
+
+# 6. Role Assignment: Allow Deployment Pipeline (Service Principal) to manage AKS
+resource "azurerm_role_assignment" "pipeline_aks_admin" {
+  principal_id         = "ea0a6fe7-4dc7-4ad7-b54a-9a5ddd3b601e" # Pipeline SP Object ID
+  role_definition_name = "Azure Kubernetes Service RBAC Cluster Admin"
+  scope                = azurerm_kubernetes_cluster.aks.id
+  skip_service_principal_aad_check = true
+}

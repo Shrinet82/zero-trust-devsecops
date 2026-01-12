@@ -62,6 +62,10 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
               
               # Install Kubelogin (Python Direct Download for Reliability)
               python3 -c "import urllib.request, zipfile, os, stat, shutil; url = 'https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip'; urllib.request.urlretrieve(url, 'kubelogin.zip'); zipfile.ZipFile('kubelogin.zip', 'r').extractall('k_tmp'); shutil.move('k_tmp/bin/linux_amd64/kubelogin', '/usr/bin/kubelogin'); os.chmod('/usr/bin/kubelogin', 0o755)"
+              
+              # FIX: Symlink Node24 to Node20 (Workaround for ADO Agent Version Mismatch)
+              # This ensures new agents can run tasks requiring Node 24
+              ln -sf /agent/externals/node20_1 /agent/externals/node24
               EOF
   )
 
