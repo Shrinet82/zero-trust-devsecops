@@ -16,7 +16,7 @@ stages:
     jobs:
       - job: Build
         pool:
-          name: "Default"
+          vmImage: "ubuntu-latest"
         steps:
           - task: AzureCLI@2
             displayName: "Build and Log into ACR"
@@ -63,7 +63,7 @@ stages:
         displayName: "Deploy to AKS"
         environment: "Production"
         pool:
-          name: "Default"
+          vmImage: "ubuntu-latest"
         strategy:
           runOnce:
             deploy:
