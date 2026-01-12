@@ -28,6 +28,16 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = false # STRICT: We use Azure AD/Entra ID for access, not admin keys
 }
 
+# 2.1 Create Log Analytics Workspace for Defender
+resource "azurerm_log_analytics_workspace" "la" {
+  name                = "la-devsecops-prod"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+
 # 3. Create the AKS Cluster
 resource "azurerm_kubernetes_cluster" "aks" {
   name                = "aks-devsecops-prod"
@@ -63,6 +73,14 @@ resource "azurerm_kubernetes_cluster" "aks" {
 
   key_vault_secrets_provider {
     secret_rotation_enabled = true
+  }
+
+  # MANDATORY for Zone 4: Azure Policy (Gatekeeper)
+  azure_policy_enabled = true
+
+  # MANDATORY for Zone 4: Runtime Defense
+  microsoft_defender {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.la.id
   }
 }
 
