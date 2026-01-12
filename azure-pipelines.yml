@@ -69,6 +69,10 @@ stages:
             deploy:
               steps:
                 - checkout: self
+                - script: |
+                    echo "Checking workspace contents:"
+                    ls -R $(System.DefaultWorkingDirectory)
+                  displayName: "Debug: List Workspace"
                 - task: KubernetesManifest@1
                   displayName: "Apply Zero-Trust Manifests"
                   inputs:
