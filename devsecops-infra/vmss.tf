@@ -48,6 +48,20 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss" {
     }
   }
 
+  custom_data = base64encode(<<-EOF
+              #!/bin/bash
+              apt-get update
+              # Install Docker
+              apt-get install -y docker.io ca-certificates curl apt-transport-https lsb-release gnupg
+              systemctl enable docker
+              systemctl start docker
+              chmod 666 /var/run/docker.sock
+              
+              # Install Azure CLI
+              curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+              EOF
+  )
+
   # REQUIRED for Azure DevOps VMSS Agents
   upgrade_mode = "Manual"
   overprovision = false

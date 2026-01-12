@@ -29,7 +29,7 @@ stages:
                 az acr login --name $(azureContainerRegistry)
 
                 # 2. Build the Docker Image
-                docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) -f $(dockerfilePath) .
+                docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) app/
                 docker tag $(azureContainerRegistry)/$(imageRepository):$(tag) $(azureContainerRegistry)/$(imageRepository):latest
 
           # STRICT: Vulnerability Scan before pushing to Registry
