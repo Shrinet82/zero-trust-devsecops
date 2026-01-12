@@ -84,7 +84,7 @@ The following diagram shows the complete flow from code commit to production dep
 
 ```mermaid
 flowchart TB
-    subgraph Developer["👨‍💻 Developer"]
+    subgraph Developer["Developer"]
         CODE[Source Code]
     end
 
@@ -97,7 +97,7 @@ flowchart TB
         VMSS[VMSS Agent Pool]
     end
 
-    subgraph Security["🔒 Security Gates"]
+    subgraph Security["Security Gates"]
         TRIVY[Trivy Scanner]
         POLICY[Azure Policy]
     end
@@ -140,7 +140,7 @@ The platform is organized into **4 Security Zones**, each addressing a specific 
 
 ```mermaid
 graph LR
-    subgraph Zone1["🏭 Zone 1: Secure Supply Chain"]
+    subgraph Zone1["Zone 1: Secure Supply Chain"]
         Z1A[Source Code]
         Z1B[Build Pipeline]
         Z1C[Trivy Scan]
@@ -148,21 +148,21 @@ graph LR
         Z1A --> Z1B --> Z1C --> Z1D
     end
 
-    subgraph Zone2["🔐 Zone 2: Identity & Access"]
+    subgraph Zone2["Zone 2: Identity and Access"]
         Z2A[OIDC Federation]
         Z2B[Workload Identity]
         Z2C[Azure RBAC]
         Z2A --> Z2B --> Z2C
     end
 
-    subgraph Zone3["🗝️ Zone 3: Secret Management"]
+    subgraph Zone3["Zone 3: Secret Management"]
         Z3A[Key Vault]
         Z3B[CSI Driver]
         Z3C[Pod Mount]
         Z3A --> Z3B --> Z3C
     end
 
-    subgraph Zone4["🛡️ Zone 4: Governance"]
+    subgraph Zone4["Zone 4: Governance"]
         Z4A[Azure Policy]
         Z4B[Gatekeeper]
         Z4C[Defender]
@@ -268,26 +268,26 @@ sequenceDiagram
 graph TB
     subgraph ADO["Azure DevOps"]
         POOL[VMSS-Pool]
-        JOB1[Pipeline Job 1]
-        JOB2[Pipeline Job 2]
+        JOB1[Job 1]
+        JOB2[Job 2]
     end
 
-    subgraph VMSS["Azure VMSS: vmss-devsecops-agents"]
-        subgraph Instance0["Instance 0"]
-            AGENT0[Azure Pipelines Agent]
-            DOCKER0[Docker Engine]
+    subgraph VMSS["VMSS Agent Pool"]
+        subgraph Inst0["Instance 0"]
+            AGENT0[Pipelines Agent]
+            DOCKER0[Docker]
             CLI0[Azure CLI]
         end
-        subgraph Instance1["Instance 1"]
-            AGENT1[Azure Pipelines Agent]
-            DOCKER1[Docker Engine]
+        subgraph Inst1["Instance 1"]
+            AGENT1[Pipelines Agent]
+            DOCKER1[Docker]
             CLI1[Azure CLI]
         end
     end
 
     POOL -->|Elastic Scale| VMSS
-    JOB1 --> Instance0
-    JOB2 --> Instance1
+    JOB1 --> Inst0
+    JOB2 --> Inst1
 
     style VMSS fill:#2ecc71,color:#fff
 ```
