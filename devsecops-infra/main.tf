@@ -84,6 +84,13 @@ resource "azurerm_role_assignment" "tf_runner_kv_admin" {
   scope                = azurerm_key_vault.vault.id
 }
 
+# 4.0.2 Permissions for AKS Kubelet (Secrets Provider) to Read Secrets
+resource "azurerm_role_assignment" "aks_kubelet_kv_user" {
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  role_definition_name = "Key Vault Secrets User"
+  scope                = azurerm_key_vault.vault.id
+}
+
 # 4.1 Create a Sample Secret for Verification
 resource "azurerm_key_vault_secret" "example" {
   name         = "AppApiKey"
