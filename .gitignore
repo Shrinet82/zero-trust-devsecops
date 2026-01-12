@@ -1,0 +1,57 @@
+# ======================================================
+# AZURE DEVSECOPS PIPELINE - GITIGNORE
+# ======================================================
+
+# Credentials & Secrets (NEVER commit these)
+.azure-credentials.env
+*.env
+.env.*
+!.env.example
+
+# Azure CLI cache
+.azure/
+
+# Terraform state (contains secrets)
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python (if applicable)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+env/
+.env/
+
+# Node.js (if applicable)
+node_modules/
+npm-debug.log*
+
+# Docker
+*.log
+
+# Kubernetes secrets (local testing)
+*-secret.yaml
+*-secrets.yaml
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
