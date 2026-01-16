@@ -12,26 +12,49 @@ variables:
 
 stages:
   # -------------------------------------------------------------------------
-  # STAGE 1: CODE QUALITY & SECURITY (The "Shift Left" Stage)
+  # STAGE 1: THE FILTER (CI & Shift-Left Security)
   # -------------------------------------------------------------------------
   - stage: CodeQuality
-    displayName: "Stage 1: Code Quality & Security"
+    displayName: "Stage 1: The Filter (CI & Security)"
     jobs:
-      - job: Linting
-        displayName: "Linting (Flake8)"
+      # 1. SECRET SCAN (Gitleaks) - Fail fast on credentials
+      - job: SecretScan
+        displayName: "Secret Scan (Gitleaks)"
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              curl -sS https://webi.sh/gitleaks | sh
+              ~/.local/bin/gitleaks detect --source . -v
+            displayName: "Run Gitleaks"
+
+      # 2. IaC SCAN (Checkov) - Scan K8s Manifests
+      - job: IaCScan
+        displayName: "IaC Scan (Checkov)"
         pool:
           name: "VMSS-Pool"
         steps:
           - script: |
               sudo apt-get update
               sudo apt-get install -y python3-pip
+              pip3 install checkov
+              checkov -d k8s/ --check CKV_K8S_21,CKV_K8S_40,CKV_K8S_10,CKV_K8S_11,CKV_K8S_12,CKV_K8S_13,CKV_K8S_28 --soft-fail
+            displayName: "Run Checkov (K8s)"
+
+      # 3. LINTING (Flake8) - Code Style
+      - job: Linting
+        displayName: "Linting (Flake8)"
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              sudo apt-get install -y python3-pip
               pip3 install flake8
-              # Stop the build if there are Python syntax errors or undefined names
               flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-              # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
               flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
             displayName: "Run Flake8"
 
+      # 4. SAST (Trivy FS) - Static Analysis
       - job: SAST
         displayName: "SAST (Trivy FS)"
         pool:
@@ -42,6 +65,7 @@ stages:
               ./trivy fs --exit-code 1 --severity CRITICAL,HIGH .
             displayName: "Trivy Repo Scan"
 
+      # 5. UNIT TESTS (Pytest)
       - job: UnitTests
         displayName: "Unit Tests (Pytest)"
         pool:
@@ -61,10 +85,10 @@ stages:
             displayName: "Publish Test Results"
 
   # -------------------------------------------------------------------------
-  # STAGE 2: BUILD, SBOM & ARTIFACTS
+  # STAGE 2: THE FACTORY (Build & Supply Chain)
   # -------------------------------------------------------------------------
   - stage: BuildAndSecurityScan
-    displayName: "Stage 2: Build, SBOM & Scan"
+    displayName: "Stage 2: The Factory (Build & Scan)"
     dependsOn: CodeQuality
     jobs:
       - job: Build
@@ -88,7 +112,7 @@ stages:
                 docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) app/
                 docker tag $(azureContainerRegistry)/$(imageRepository):$(tag) $(azureContainerRegistry)/$(imageRepository):latest
 
-          # SBOM GENERATION (Supply Chain Security)
+          # SBOM GENERATION (CycloneDX)
           - script: |
               ./trivy image --format cyclonedx --output sbom.json $(azureContainerRegistry)/$(imageRepository):$(tag)
             displayName: "Generate SBOM (CycloneDX)"
@@ -99,7 +123,7 @@ stages:
               ArtifactName: "SBOM"
             displayName: "Publish SBOM Artifact"
 
-          # VULNERABILITY SCAN (Kill Logic)
+          # KILL LOGIC (Trivy Image Scan)
           - script: |
               ./trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(imageRepository):$(tag)
             displayName: "Trivy Image Scan (Block Critical)"
@@ -115,10 +139,10 @@ stages:
                 docker push $(azureContainerRegistry)/$(imageRepository):latest
 
   # -------------------------------------------------------------------------
-  # STAGE 3: ZERO-TRUST DEPLOYMENT
+  # STAGE 3: THE PROVING GROUND (Deploy & Verify)
   # -------------------------------------------------------------------------
   - stage: DeployToAKS
-    displayName: "Stage 3: Zero-Trust Deploy"
+    displayName: "Stage 3: The Proving Ground"
     dependsOn: BuildAndSecurityScan
     jobs:
       - deployment: Deploy
@@ -149,14 +173,15 @@ stages:
                       k8s/deployment.yaml
                     containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
 
-      - job: SmokeTest
-        displayName: "Post-Deploy Smoke Test"
+      # SMOKE TEST & DAST (Parallel Verification)
+      - job: Verification
+        displayName: "Smoke Test & DAST"
         dependsOn: Deploy
         pool:
           name: "VMSS-Pool"
         steps:
           - task: AzureCLI@2
-            displayName: "Verify Pod Health"
+            displayName: "Setup Access"
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: "bash"
@@ -164,8 +189,38 @@ stages:
                 az aks get-credentials -g rg-devsecops-prod -n aks-devsecops-prod
                 kubelogin convert-kubeconfig -l azurecli
 
-                echo "Waiting for pod rollout..."
-                kubectl rollout status deployment/sample-app --timeout=60s
+          - script: |
+              echo "Waiting for pod rollout..."
+              kubectl rollout status deployment/sample-app --timeout=60s
+              kubectl get pods -l app=sample-app
+            displayName: "Smoke Test (Rollout Status)"
 
-                echo "Checking pod status..."
-                kubectl get pods -l app=sample-app
+          - script: |
+              echo "Starting Port Forward for DAST..."
+              # Run port-forward in background
+              kubectl port-forward svc/sample-app 8080:80 &
+              PID=$!
+
+              echo "Waiting for port-forward..."
+              sleep 10
+
+              echo "Running OWASP ZAP Baseline Scan..."
+              # Pull ZAP image
+              docker pull ghcr.io/zaproxy/zaproxy:stable
+
+              # Run ZAP against localhost (using host network or special docker networking)
+              # Using --network host allows container to reach the port-forward listening on host
+              docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                -t http://localhost:8080 \
+                -r zap_report.html \
+                -I  # Fail only on errors, ignore warnings for baseline
+
+              # Cleanup
+              kill $PID
+            displayName: "DAST (OWASP ZAP Scan)"
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: "zap_report.html"
+              ArtifactName: "ZAP_Report"
+            displayName: "Publish DAST Report"
