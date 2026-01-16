@@ -11,76 +11,115 @@ variables:
   azureServiceConnection: "Azure-DevSecOps-Connection"
 
 stages:
+  # -------------------------------------------------------------------------
+  # STAGE 1: CODE QUALITY & SECURITY (The "Shift Left" Stage)
+  # -------------------------------------------------------------------------
+  - stage: CodeQuality
+    displayName: "Stage 1: Code Quality & Security"
+    jobs:
+      - job: Linting
+        displayName: "Linting (Flake8)"
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              sudo apt-get update
+              sudo apt-get install -y python3-pip
+              pip3 install flake8
+              # Stop the build if there are Python syntax errors or undefined names
+              flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+              # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+              flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+            displayName: "Run Flake8"
+
+      - job: SAST
+        displayName: "SAST (Trivy FS)"
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
+              ./trivy fs --exit-code 1 --severity CRITICAL,HIGH .
+            displayName: "Trivy Repo Scan"
+
+      - job: UnitTests
+        displayName: "Unit Tests (Pytest)"
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              sudo apt-get install -y python3-pip
+              pip3 install pytest flask
+              pytest --junitxml=test-results.xml
+            displayName: "Run Pytest"
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: "JUnit"
+              testResultsFiles: "**/test-results.xml"
+            displayName: "Publish Test Results"
+
+  # -------------------------------------------------------------------------
+  # STAGE 2: BUILD, SBOM & ARTIFACTS
+  # -------------------------------------------------------------------------
   - stage: BuildAndSecurityScan
-    displayName: "CI Stage: Build and Scan"
+    displayName: "Stage 2: Build, SBOM & Scan"
+    dependsOn: CodeQuality
     jobs:
       - job: Build
         pool:
           name: "VMSS-Pool"
         steps:
-          # SELF-HEAL: Install Azure CLI if missing (Fixes "az not installed" and "apt lock" errors)
           - script: |
               if ! command -v az &> /dev/null; then
                   echo "Azure CLI not found. Installing..."
-                  # Wait for any background apt processes to finish
-                  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-                      echo "Waiting for apt lock..."
-                      sleep 5
-                  done
-                  
-                  # Force clean locks if stuck
-                  sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock
-                  
-                  # Repair dpkg if interrupted
-                  sudo dpkg --configure -a || true
-                  
-                  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-              else
-                  echo "Azure CLI already installed."
+                  sudo curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
               fi
-              az --version
-            displayName: "Ensure Azure CLI Installed"
+            displayName: "Ensure Azure CLI"
 
           - task: AzureCLI@2
             displayName: "Build and Log into ACR"
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: "bash"
-              scriptLocation: "inlineScript"
               inlineScript: |
-                # 1. Login to ACR using the OIDC Identity
                 az acr login --name $(azureContainerRegistry)
-
-                # 2. Build the Docker Image
                 docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) app/
                 docker tag $(azureContainerRegistry)/$(imageRepository):$(tag) $(azureContainerRegistry)/$(imageRepository):latest
 
-          # STRICT: Vulnerability Scan before pushing to Registry
+          # SBOM GENERATION (Supply Chain Security)
           - script: |
-              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
-              ./trivy image --exit-code 1 --severity HIGH,CRITICAL $(azureContainerRegistry)/$(imageRepository):$(tag)
-            displayName: "Trivy Security Scan (Kill Logic)"
+              ./trivy image --format cyclonedx --output sbom.json $(azureContainerRegistry)/$(imageRepository):$(tag)
+            displayName: "Generate SBOM (CycloneDX)"
 
-          # Only push if the security scan passes
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: "sbom.json"
+              ArtifactName: "SBOM"
+            displayName: "Publish SBOM Artifact"
+
+          # VULNERABILITY SCAN (Kill Logic)
+          - script: |
+              ./trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(imageRepository):$(tag)
+            displayName: "Trivy Image Scan (Block Critical)"
+
           - task: AzureCLI@2
             displayName: "Push to ACR"
             inputs:
               azureSubscription: $(azureServiceConnection)
               scriptType: "bash"
-              scriptLocation: "inlineScript"
               inlineScript: |
-                # 1. Login again (just to be safe/stateless)
                 az acr login --name $(azureContainerRegistry)
-
-                # 2. Push the images
                 docker push $(azureContainerRegistry)/$(imageRepository):$(tag)
                 docker push $(azureContainerRegistry)/$(imageRepository):latest
 
+  # -------------------------------------------------------------------------
+  # STAGE 3: ZERO-TRUST DEPLOYMENT
+  # -------------------------------------------------------------------------
   - stage: DeployToAKS
-    displayName: "CD Stage: Zero-Trust Deploy"
-    # STRICT: Only run if CI stage succeeded
+    displayName: "Stage 3: Zero-Trust Deploy"
     dependsOn: BuildAndSecurityScan
-    condition: succeeded()
     jobs:
       - deployment: Deploy
         displayName: "Deploy to AKS"
@@ -93,19 +132,12 @@ stages:
               steps:
                 - checkout: self
                 - script: |
-                    echo "Checking workspace contents:"
-                    ls -R $(System.DefaultWorkingDirectory)
-
-                    echo "Installing Kubelogin (Runtime)..."
                     sudo curl -L https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip -o kubelogin.zip
-                    sudo apt-get install -y unzip
-                    sudo unzip -o kubelogin.zip
-                    sudo mv bin/linux_amd64/kubelogin /usr/bin/kubelogin
-                    sudo chmod +x /usr/bin/kubelogin
-                    kubelogin --version
-                  displayName: "Debug & Install Kubelogin"
+                    sudo unzip -o kubelogin.zip && sudo mv bin/linux_amd64/kubelogin /usr/bin/kubelogin && sudo chmod +x /usr/bin/kubelogin
+                  displayName: "Install Kubelogin"
+
                 - task: KubernetesManifest@1
-                  displayName: "Apply Zero-Trust Manifests"
+                  displayName: "Apply Manifests"
                   inputs:
                     action: "deploy"
                     connectionType: "azureResourceManager"
@@ -116,3 +148,24 @@ stages:
                       k8s/secretproviderclass.yaml
                       k8s/deployment.yaml
                     containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
+
+      - job: SmokeTest
+        displayName: "Post-Deploy Smoke Test"
+        dependsOn: Deploy
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - task: AzureCLI@2
+            displayName: "Verify Pod Health"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: "bash"
+              inlineScript: |
+                az aks get-credentials -g rg-devsecops-prod -n aks-devsecops-prod
+                kubelogin convert-kubeconfig -l azurecli
+
+                echo "Waiting for pod rollout..."
+                kubectl rollout status deployment/sample-app --timeout=60s
+
+                echo "Checking pod status..."
+                kubectl get pods -l app=sample-app
