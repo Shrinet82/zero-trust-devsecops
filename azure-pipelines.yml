@@ -12,12 +12,11 @@ variables:
 
 stages:
   # -------------------------------------------------------------------------
-  # STAGE 1: THE FILTER (CI & Shift-Left Security)
+  # STAGE 1: SECURITY GATES (Fail Fast)
   # -------------------------------------------------------------------------
-  - stage: CodeQuality
-    displayName: "Stage 1: The Filter (CI & Security)"
+  - stage: SecurityGates
+    displayName: "Stage 1: Security Gates (Pre-Commit)"
     jobs:
-      # 1. SECRET SCAN (Gitleaks) - Fail fast on credentials
       - job: SecretScan
         displayName: "Secret Scan (Gitleaks)"
         pool:
@@ -28,7 +27,6 @@ stages:
               ~/.local/bin/gitleaks detect --source . -v
             displayName: "Run Gitleaks"
 
-      # 2. IaC SCAN (Checkov) - Scan K8s Manifests
       - job: IaCScan
         displayName: "IaC Scan (Checkov)"
         pool:
@@ -41,7 +39,13 @@ stages:
               checkov -d k8s/ --check CKV_K8S_21,CKV_K8S_40,CKV_K8S_10,CKV_K8S_11,CKV_K8S_12,CKV_K8S_13,CKV_K8S_28 --soft-fail
             displayName: "Run Checkov (K8s)"
 
-      # 3. LINTING (Flake8) - Code Style
+  # -------------------------------------------------------------------------
+  # STAGE 2: APP QUALITY (Lint & Test)
+  # -------------------------------------------------------------------------
+  - stage: AppQuality
+    displayName: "Stage 2: App Quality"
+    dependsOn: SecurityGates
+    jobs:
       - job: Linting
         displayName: "Linting (Flake8)"
         pool:
@@ -54,7 +58,6 @@ stages:
               flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
             displayName: "Run Flake8"
 
-      # 4. SAST (Trivy FS) - Static Analysis
       - job: SAST
         displayName: "SAST (Trivy FS)"
         pool:
@@ -65,7 +68,6 @@ stages:
               ./trivy fs --exit-code 1 --severity CRITICAL,HIGH .
             displayName: "Trivy Repo Scan"
 
-      # 5. UNIT TESTS (Pytest)
       - job: UnitTests
         displayName: "Unit Tests (Pytest)"
         pool:
@@ -85,11 +87,11 @@ stages:
             displayName: "Publish Test Results"
 
   # -------------------------------------------------------------------------
-  # STAGE 2: THE FACTORY (Build & Supply Chain)
+  # STAGE 3: THE FACTORY (Build & Artifacts)
   # -------------------------------------------------------------------------
-  - stage: BuildAndSecurityScan
-    displayName: "Stage 2: The Factory (Build & Scan)"
-    dependsOn: CodeQuality
+  - stage: BuildFactory
+    displayName: "Stage 3: The Factory (Build)"
+    dependsOn: AppQuality
     jobs:
       - job: Build
         pool:
@@ -139,11 +141,11 @@ stages:
                 docker push $(azureContainerRegistry)/$(imageRepository):latest
 
   # -------------------------------------------------------------------------
-  # STAGE 3: THE PROVING GROUND (Deploy & Verify)
+  # STAGE 4: DELIVERY (Deployment)
   # -------------------------------------------------------------------------
-  - stage: DeployToAKS
-    displayName: "Stage 3: The Proving Ground"
-    dependsOn: BuildAndSecurityScan
+  - stage: Delivery
+    displayName: "Stage 4: Delivery (Deploy)"
+    dependsOn: BuildFactory
     jobs:
       - deployment: Deploy
         displayName: "Deploy to AKS"
@@ -173,10 +175,15 @@ stages:
                       k8s/deployment.yaml
                     containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
 
-      # SMOKE TEST & DAST (Parallel Verification)
-      - job: Verification
+  # -------------------------------------------------------------------------
+  # STAGE 5: LIVE VERIFICATION (Prove It)
+  # -------------------------------------------------------------------------
+  - stage: LiveVerification
+    displayName: "Stage 5: Live Verification"
+    dependsOn: Delivery
+    jobs:
+      - job: Verify
         displayName: "Smoke Test & DAST"
-        dependsOn: Deploy
         pool:
           name: "VMSS-Pool"
         steps:
@@ -209,11 +216,10 @@ stages:
               docker pull ghcr.io/zaproxy/zaproxy:stable
 
               # Run ZAP against localhost (using host network or special docker networking)
-              # Using --network host allows container to reach the port-forward listening on host
               docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
                 -t http://localhost:8080 \
                 -r zap_report.html \
-                -I  # Fail only on errors, ignore warnings for baseline
+                -I  # Fail only on errors
 
               # Cleanup
               kill $PID
