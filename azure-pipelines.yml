@@ -264,7 +264,11 @@ stages:
                 echo "Install failed (likely locked), retrying in 10s..."
                 sleep 10
               done
-            displayName: "Ensure Azure CLI"
+
+              # Install Kubectl
+              sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+            displayName: "Ensure Azure CLI & Kubectl"
 
           - task: AzureCLI@2
             displayName: "Setup Access"
