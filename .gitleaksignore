@@ -1,0 +1,9 @@
+
+[allowlist]
+description = "Allow Azure Key Vault Name (Public Identifier)"
+regexes = [
+    '''kvshrinet82prod'''
+]
+paths = [
+    '''k8s/secretproviderclass.yaml'''
+]
