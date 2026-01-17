@@ -299,20 +299,35 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 echo "Starting Port Forward for DAST..."
-                # Run port-forward in background
-                kubectl port-forward svc/sample-app 8080:80 &
+                # Run port-forward in background with logging and bind to all interfaces
+                kubectl port-forward svc/sample-app 8080:80 --address 0.0.0.0 > pf.log 2>&1 &
                 PID=$!
 
                 echo "Waiting for port-forward..."
                 sleep 10
 
+                # Check if port-forward is alive
+                if ! kill -0 $PID 2>/dev/null; then
+                  echo "Port-forward crashed! Logs:"
+                  cat pf.log
+                  exit 1
+                fi
+
+                echo "Port-forward is running (PID $PID). Logs:"
+                cat pf.log
+
+                echo "Preparing permissions for ZAP..."
+                touch zap_report.html
+                chmod 666 zap_report.html
+
                 echo "Running OWASP ZAP Baseline Scan..."
                 # Pull ZAP image
                 docker pull ghcr.io/zaproxy/zaproxy:stable
 
-                # Run ZAP against localhost (using host network or special docker networking)
+                # Run ZAP against localhost (using host network)
+                # Targeting 0.0.0.0:8080 explicitly
                 docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-                  -t http://localhost:8080 \
+                  -t http://0.0.0.0:8080 \
                   -r zap_report.html \
                   -I  # Fail only on errors
 
