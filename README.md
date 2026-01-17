@@ -93,10 +93,13 @@ This platform demonstrates how to build a **Zero-Trust DevSecOps pipeline** that
 │                        ZERO-TRUST SECURITY FEATURES                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  ✅ OIDC Authentication (No stored secrets)                                │
-│  ✅ Trivy Container Vulnerability Scanning                                 │
+│  ✅ Gitleaks Secret Scanning (Git History)                                  │
+│  ✅ Checkov IaC Scanning (Kubernetes Manifests)                             │
+│  ✅ Trivy Container Vulnerability Scanning                                  │
 │  ✅ Azure Key Vault with CSI Driver Secret Injection                       │
 │  ✅ Azure Policy (Gatekeeper) for Pod Security Standards                   │
 │  ✅ Microsoft Defender for Containers                                      │
+│  ✅ OWASP ZAP DAST (Runtime Vulnerability Scanning)                        │
 │  ✅ Self-Hosted VMSS Build Agents (Elastic Scaling)                        │
 │  ✅ Infrastructure as Code (Terraform)                                     │
 │  ✅ GitOps-Ready Kubernetes Manifests                                      │
@@ -339,13 +342,16 @@ graph TB
 
 ### Security Tools
 
-| Tool                   | Purpose                          | Integration Point         |
-| ---------------------- | -------------------------------- | ------------------------- |
-| **Trivy**              | Container vulnerability scanning | CI Pipeline (Build Stage) |
-| **Azure Policy**       | Kubernetes governance            | Cluster Admission Control |
-| **OPA Gatekeeper**     | Policy enforcement engine        | Kubernetes Webhook        |
-| **Microsoft Defender** | Runtime threat detection         | AKS Add-on                |
-| **Secrets Store CSI**  | Secret injection                 | Pod Volume Mount          |
+| Tool                   | Purpose                          | Integration Point           |
+| ---------------------- | -------------------------------- | --------------------------- |
+| **Gitleaks**           | Secret scanning                  | CI Pipeline (Security Gate) |
+| **Checkov**            | IaC security scanning            | CI Pipeline (Security Gate) |
+| **Trivy**              | Container vulnerability scanning | CI Pipeline (Build Stage)   |
+| **Azure Policy**       | Kubernetes governance            | Cluster Admission Control   |
+| **OPA Gatekeeper**     | Policy enforcement engine        | Kubernetes Webhook          |
+| **Microsoft Defender** | Runtime threat detection         | AKS Add-on                  |
+| **Secrets Store CSI**  | Secret injection                 | Pod Volume Mount            |
+| **OWASP ZAP**          | DAST (Runtime Scanning)          | CD Pipeline (Verification)  |
 
 ### Programming Languages & Frameworks
 
@@ -601,9 +607,9 @@ kubectl get pods
 
 ---
 
-## 🔄 Pipeline Stages
+## 🔄 Pipeline Stages (5-Stage "Shift Left" Architecture)
 
-The pipeline follows a **"Shift Left" Security Architecture** divided into 5 granular stages:
+The pipeline has been refactored into **5 granular stages** to maximize observability and security:
 
 ### Stage 1: Security Gates (The Filter)
 
@@ -637,7 +643,7 @@ The pipeline follows a **"Shift Left" Security Architecture** divided into 5 gra
 
 ### Stage 4: Delivery
 
-> **Goal**: specific Zero-Trust deployment to infrastructure.
+> **Goal**: Specific Zero-Trust deployment to infrastructure.
 
 | Job        | Tool      | Purpose                                                |
 | ---------- | --------- | ------------------------------------------------------ |
