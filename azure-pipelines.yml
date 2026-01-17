@@ -142,8 +142,8 @@ stages:
             displayName: "Build and Log into ACR"
             inputs:
               azureSubscription: $(azureServiceConnection)
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 az acr login --name $(azureContainerRegistry)
                 docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) app/
@@ -169,8 +169,8 @@ stages:
             displayName: "Push to ACR"
             inputs:
               azureSubscription: $(azureServiceConnection)
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 az acr login --name $(azureContainerRegistry)
                 docker push $(azureContainerRegistry)/$(imageRepository):$(tag)
@@ -227,8 +227,8 @@ stages:
             displayName: "Setup Access"
             inputs:
               azureSubscription: $(azureServiceConnection)
-              scriptType: "bash"
-              scriptLocation: "inlineScript"
+              scriptType: bash
+              scriptLocation: inlineScript
               inlineScript: |
                 az aks get-credentials -g rg-devsecops-prod -n aks-devsecops-prod
                 kubelogin convert-kubeconfig -l azurecli
