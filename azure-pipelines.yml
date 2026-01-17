@@ -35,12 +35,15 @@ stages:
           name: "VMSS-Pool"
         steps:
           - script: |
-              # Wait for apt lock
-              while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
-              sudo dpkg --configure -a || true
+              # Retry logic for apt-get
+              for i in {1..10}; do
+                if sudo apt-get update && sudo apt-get install -y python3-pip; then
+                  break
+                fi
+                echo "Apt failed, retrying in 10s..."
+                sleep 10
+              done
 
-              sudo apt-get update
-              sudo apt-get install -y python3-pip
               pip3 install checkov
 
               # Fix PATH
@@ -61,11 +64,15 @@ stages:
           name: "VMSS-Pool"
         steps:
           - script: |
-              # Wait for apt lock
-              while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
-              sudo dpkg --configure -a || true
+              # Retry logic for apt-get
+              for i in {1..10}; do
+                if sudo apt-get install -y python3-pip; then
+                  break
+                fi
+                echo "Apt failed, retrying in 10s..."
+                sleep 10
+              done
 
-              sudo apt-get install -y python3-pip
               pip3 install flake8
 
               # Fix PATH
@@ -90,11 +97,15 @@ stages:
           name: "VMSS-Pool"
         steps:
           - script: |
-              # Wait for apt lock
-              while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
-              sudo dpkg --configure -a || true
+              # Retry logic for apt-get
+              for i in {1..10}; do
+                if sudo apt-get install -y python3-pip; then
+                  break
+                fi
+                echo "Apt failed, retrying in 10s..."
+                sleep 10
+              done
 
-              sudo apt-get install -y python3-pip
               pip3 install pytest flask
 
               # Fix PATH
