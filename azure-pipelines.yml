@@ -210,6 +210,15 @@ stages:
               steps:
                 - checkout: self
                 - script: |
+                    # Retry logic for unzip install
+                    for i in {1..10}; do
+                      if sudo apt-get update && sudo apt-get install -y unzip; then
+                        break
+                      fi
+                      echo "Apt failed, retrying in 10s..."
+                      sleep 10
+                    done
+
                     sudo curl -L https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip -o kubelogin.zip
                     sudo unzip -o kubelogin.zip && sudo mv bin/linux_amd64/kubelogin /usr/bin/kubelogin && sudo chmod +x /usr/bin/kubelogin
                   displayName: "Install Kubelogin"
