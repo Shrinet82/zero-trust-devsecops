@@ -149,6 +149,11 @@ stages:
                 docker build -t $(azureContainerRegistry)/$(imageRepository):$(tag) app/
                 docker tag $(azureContainerRegistry)/$(imageRepository):$(tag) $(azureContainerRegistry)/$(imageRepository):latest
 
+          # INSTALL TRIVY
+          - script: |
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b .
+            displayName: "Install Trivy"
+
           # SBOM GENERATION (CycloneDX)
           - script: |
               ./trivy image --format cyclonedx --output sbom.json $(azureContainerRegistry)/$(imageRepository):$(tag)
