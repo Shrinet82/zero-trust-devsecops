@@ -317,9 +317,11 @@ stages:
                 echo "Port-forward is running (PID $PID). Logs:"
                 cat pf.log
 
-                echo "Preparing permissions for ZAP..."
-                touch zap_report.html
-                chmod 666 zap_report.html
+                echo "Preparing workspace for ZAP..."
+                mkdir -p zap-work
+                chmod 777 zap-work
+                touch zap-work/zap_report.html
+                chmod 666 zap-work/zap_report.html
 
                 echo "Running OWASP ZAP Baseline Scan..."
                 # Pull ZAP image
@@ -327,7 +329,7 @@ stages:
 
                 # Run ZAP against localhost (using host network)
                 # Targeting 0.0.0.0:8080 explicitly
-                docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                docker run -v $(pwd)/zap-work:/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
                   -t http://0.0.0.0:8080 \
                   -r zap_report.html \
                   -I  # Fail only on errors
@@ -337,6 +339,6 @@ stages:
 
           - task: PublishBuildArtifacts@1
             inputs:
-              PathtoPublish: "zap_report.html"
+              PathtoPublish: "zap-work/zap_report.html"
               ArtifactName: "ZAP_Report"
             displayName: "Publish DAST Report"
