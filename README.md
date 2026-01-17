@@ -566,14 +566,12 @@ terraform apply -auto-approve
 ### Step 6: Configure Azure DevOps
 
 1. **Create Service Connection**:
-
    - Go to Project Settings → Service Connections
    - Create "Azure Resource Manager" connection
    - Select "Workload Identity federation (manual)"
    - Enter the App ID, Tenant ID, and Subscription ID
 
 2. **Create Pipeline**:
-
    - Go to Pipelines → New Pipeline
    - Select GitHub as source
    - Choose this repository
@@ -605,38 +603,54 @@ kubectl get pods
 
 ## 🔄 Pipeline Stages
 
-The CI/CD pipeline consists of two main stages:
+The pipeline follows a **"Shift Left" Security Architecture** divided into 5 granular stages:
 
-### Stage 1: Build and Scan
+### Stage 1: Security Gates (The Filter)
 
-```yaml
-# Executed by: VMSS Agent Pool
-# Duration: ~5 minutes
-```
+> **Goal**: Fail fast on security violations before code is even checked.
 
-| Step | Action                 | Failure Behavior   |
-| ---- | ---------------------- | ------------------ |
-| 1    | Checkout Code          | Abort              |
-| 2    | Azure CLI Login (OIDC) | Abort              |
-| 3    | Docker Build           | Abort              |
-| 4    | Trivy Scan             | **BLOCK PIPELINE** |
-| 5    | Docker Push to ACR     | Abort              |
+| Job             | Tool       | Purpose                                          |
+| --------------- | ---------- | ------------------------------------------------ |
+| **Secret Scan** | `gitleaks` | Detects hardcoded credentials in commit history  |
+| **IaC Scan**    | `checkov`  | Scans Kubernetes manifests for misconfigurations |
 
-### Stage 2: Deploy to AKS
+### Stage 2: App Quality
 
-```yaml
-# Executed by: VMSS Agent Pool
-# Duration: ~3 minutes
-# Depends on: Stage 1 Success
-```
+> **Goal**: Ensure code logic and style are production-ready.
 
-| Step | Action                    | Failure Behavior |
-| ---- | ------------------------- | ---------------- |
-| 1    | Checkout Code             | Abort            |
-| 2    | Install kubelogin         | Abort            |
-| 3    | Apply SecretProviderClass | Abort            |
-| 4    | Apply Deployment          | Abort + Rollback |
-| 5    | Wait for Rollout          | Timeout (5 min)  |
+| Job            | Tool       | Purpose                                        |
+| -------------- | ---------- | ---------------------------------------------- |
+| **Linting**    | `flake8`   | Enforces Python code style (PEP 8)             |
+| **SAST**       | `trivy fs` | Static analysis for filesystem vulnerabilities |
+| **Unit Tests** | `pytest`   | Validates application logic                    |
+
+### Stage 3: The Factory
+
+> **Goal**: Create an immutable, vetted artifact.
+
+| Job            | Tool     | Purpose                                          |
+| -------------- | -------- | ------------------------------------------------ |
+| **Build**      | `docker` | Builds the application container                 |
+| **SBOM**       | `trivy`  | Generates CycleDX Software Bill of Materials     |
+| **Kill Logic** | `trivy`  | Blocks build if Critical vulnerabilities found   |
+| **Push**       | `az acr` | Pushes "Clean" image to Azure Container Registry |
+
+### Stage 4: Delivery
+
+> **Goal**: specific Zero-Trust deployment to infrastructure.
+
+| Job        | Tool      | Purpose                                                |
+| ---------- | --------- | ------------------------------------------------------ |
+| **Deploy** | `kubectl` | Applies manifests using Workload Identity (No Secrets) |
+
+### Stage 5: Live Verification (The Proving Ground)
+
+> **Goal**: Validate runtime health and security posture.
+
+| Job            | Tool        | Purpose                                             |
+| -------------- | ----------- | --------------------------------------------------- |
+| **Smoke Test** | `kubectl`   | Verifies pod rollout status                         |
+| **DAST**       | `OWASP ZAP` | Attacks running app to find runtime vulnerabilities |
 
 ---
 
