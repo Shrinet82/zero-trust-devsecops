@@ -233,6 +233,7 @@ stages:
                     kubernetesCluster: "aks-devsecops-prod"
                     manifests: |
                       k8s/secretproviderclass.yaml
+                      k8s/service.yaml
                       k8s/deployment.yaml
                     containers: "$(azureContainerRegistry)/$(imageRepository):$(tag)"
 
