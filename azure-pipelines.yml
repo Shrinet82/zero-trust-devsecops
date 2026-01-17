@@ -23,8 +23,10 @@ stages:
           name: "VMSS-Pool"
         steps:
           - script: |
-              curl -sS https://webi.sh/gitleaks | sh
-              ~/.local/bin/gitleaks detect --source . -v
+              wget https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
+              tar -xzf gitleaks_8.18.2_linux_x64.tar.gz
+              sudo mv gitleaks /usr/local/bin/
+              gitleaks detect --source . -v
             displayName: "Run Gitleaks"
 
       - job: IaCScan
@@ -40,6 +42,9 @@ stages:
               sudo apt-get update
               sudo apt-get install -y python3-pip
               pip3 install checkov
+
+              # Fix PATH
+              export PATH=$HOME/.local/bin:$PATH
               checkov -d k8s/ --check CKV_K8S_21,CKV_K8S_40,CKV_K8S_10,CKV_K8S_11,CKV_K8S_12,CKV_K8S_13,CKV_K8S_28 --soft-fail
             displayName: "Run Checkov (K8s)"
 
@@ -62,6 +67,9 @@ stages:
 
               sudo apt-get install -y python3-pip
               pip3 install flake8
+
+              # Fix PATH
+              export PATH=$HOME/.local/bin:$PATH
               flake8 app/ --count --select=E9,F63,F7,F82 --show-source --statistics
               flake8 app/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
             displayName: "Run Flake8"
@@ -88,6 +96,9 @@ stages:
 
               sudo apt-get install -y python3-pip
               pip3 install pytest flask
+
+              # Fix PATH
+              export PATH=$HOME/.local/bin:$PATH
               pytest --junitxml=test-results.xml
             displayName: "Run Pytest"
 
