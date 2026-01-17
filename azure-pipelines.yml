@@ -280,34 +280,44 @@ stages:
                 az aks get-credentials -g rg-devsecops-prod -n aks-devsecops-prod
                 kubelogin convert-kubeconfig -l azurecli
 
-          - script: |
-              echo "Waiting for pod rollout..."
-              kubectl rollout status deployment/sample-app --timeout=60s
-              kubectl get pods -l app=sample-app
+          - task: AzureCLI@2
             displayName: "Smoke Test (Rollout Status)"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Waiting for pod rollout..."
+                kubectl rollout status deployment/sample-app --timeout=60s
+                kubectl get pods -l app=sample-app
 
-          - script: |
-              echo "Starting Port Forward for DAST..."
-              # Run port-forward in background
-              kubectl port-forward svc/sample-app 8080:80 &
-              PID=$!
-
-              echo "Waiting for port-forward..."
-              sleep 10
-
-              echo "Running OWASP ZAP Baseline Scan..."
-              # Pull ZAP image
-              docker pull ghcr.io/zaproxy/zaproxy:stable
-
-              # Run ZAP against localhost (using host network or special docker networking)
-              docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-                -t http://localhost:8080 \
-                -r zap_report.html \
-                -I  # Fail only on errors
-
-              # Cleanup
-              kill $PID
+          - task: AzureCLI@2
             displayName: "DAST (OWASP ZAP Scan)"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                echo "Starting Port Forward for DAST..."
+                # Run port-forward in background
+                kubectl port-forward svc/sample-app 8080:80 &
+                PID=$!
+
+                echo "Waiting for port-forward..."
+                sleep 10
+
+                echo "Running OWASP ZAP Baseline Scan..."
+                # Pull ZAP image
+                docker pull ghcr.io/zaproxy/zaproxy:stable
+
+                # Run ZAP against localhost (using host network or special docker networking)
+                docker run -v $(pwd):/zap/wrk/:rw --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                  -t http://localhost:8080 \
+                  -r zap_report.html \
+                  -I  # Fail only on errors
+
+                # Cleanup
+                kill $PID
 
           - task: PublishBuildArtifacts@1
             inputs:
