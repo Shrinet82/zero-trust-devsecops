@@ -80,8 +80,8 @@ stages:
 
           - script: |
               cd frontend
-              npm ci
-              npm run build
+              npm install
+              npx vite build
             displayName: "Build Frontend"
 
   # -------------------------------------------------------------------------
