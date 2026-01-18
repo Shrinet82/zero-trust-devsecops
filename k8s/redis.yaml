@@ -14,20 +14,23 @@ spec:
         app: redis
     spec:
       securityContext:
-        runAsUser: 999
-        runAsGroup: 999
-        fsGroup: 999
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: redis
-          image: redis:7-alpine
+          image: bitnami/redis:7.2
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
             capabilities:
               drop:
                 - ALL
+          env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
           resources:
             requests:
               cpu: 50m
@@ -39,7 +42,7 @@ spec:
             - containerPort: 6379
           volumeMounts:
             - name: redis-data
-              mountPath: /data
+              mountPath: /bitnami/redis/data
   volumeClaimTemplates:
     - metadata:
         name: redis-data
