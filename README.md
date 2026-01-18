@@ -32,45 +32,40 @@
 
 ```mermaid
 flowchart LR
-    subgraph S1["🛡️ Stage 1<br/>Security Gates"]
-        direction TB
-        S1A["🔐 Gitleaks<br/><i>Secret Scan</i>"]
-        S1B["📋 Checkov<br/><i>IaC Scan</i>"]
+    subgraph S1["Stage 1: Security Gates"]
+        S1A[Gitleaks]
+        S1B[Checkov]
     end
 
-    subgraph S2["✨ Stage 2<br/>App Quality"]
-        direction TB
-        S2A["🎨 Flake8<br/><i>Linting</i>"]
-        S2B["🔍 Trivy FS<br/><i>SAST</i>"]
-        S2C["🧪 Pytest<br/><i>Unit Tests</i>"]
+    subgraph S2["Stage 2: App Quality"]
+        S2A[Flake8]
+        S2B[Trivy FS]
+        S2C[Pytest]
     end
 
-    subgraph S3["🏭 Stage 3<br/>Build Factory"]
-        direction TB
-        S3A["🐳 Docker Build"]
-        S3B["📦 SBOM Gen"]
-        S3C["🔒 Trivy Image<br/><i>Kill Logic</i>"]
-        S3D["☁️ ACR Push"]
+    subgraph S3["Stage 3: Build Factory"]
+        S3A[Docker Build]
+        S3B[SBOM Gen]
+        S3C[Trivy Image]
+        S3D[ACR Push]
     end
 
-    subgraph S4["🚀 Stage 4<br/>Delivery"]
-        direction TB
-        S4A["☸️ AKS Deploy<br/><i>Zero-Trust</i>"]
+    subgraph S4["Stage 4: Delivery"]
+        S4A[AKS Deploy]
     end
 
-    subgraph S5["🔬 Stage 5<br/>Verification"]
-        direction TB
-        S5A["💨 Smoke Test"]
-        S5B["🕷️ OWASP ZAP<br/><i>DAST</i>"]
+    subgraph S5["Stage 5: Verification"]
+        S5A[Smoke Test]
+        S5B[OWASP ZAP]
     end
 
     S1 --> S2 --> S3 --> S4 --> S5
 
-    style S1 fill:#e74c3c,stroke:#c0392b,color:#fff
-    style S2 fill:#f39c12,stroke:#d68910,color:#fff
-    style S3 fill:#3498db,stroke:#2980b9,color:#fff
-    style S4 fill:#2ecc71,stroke:#27ae60,color:#fff
-    style S5 fill:#9b59b6,stroke:#8e44ad,color:#fff
+    style S1 fill:#e74c3c,color:#fff
+    style S2 fill:#f39c12,color:#fff
+    style S3 fill:#3498db,color:#fff
+    style S4 fill:#2ecc71,color:#fff
+    style S5 fill:#9b59b6,color:#fff
 ```
 
 ---
@@ -79,39 +74,39 @@ flowchart LR
 
 ```mermaid
 graph TB
-    subgraph Z1["🔗 Zone 1: Secure Supply Chain"]
+    subgraph Z1["Zone 1: Secure Supply Chain"]
         Z1A[GitHub] --> Z1B[VMSS Agents]
         Z1B --> Z1C[Gitleaks + Checkov]
         Z1C --> Z1D[Trivy Scan]
         Z1D --> Z1E[ACR]
     end
 
-    subgraph Z2["🪪 Zone 2: Identity & Access"]
+    subgraph Z2["Zone 2: Identity"]
         Z2A[OIDC Federation] --> Z2B[Workload Identity]
         Z2B --> Z2C[Azure RBAC]
     end
 
-    subgraph Z3["🔑 Zone 3: Secret Management"]
-        Z3A[Azure Key Vault] --> Z3B[CSI Driver]
-        Z3B --> Z3C[Pod Volume Mount]
+    subgraph Z3["Zone 3: Secrets"]
+        Z3A[Key Vault] --> Z3B[CSI Driver]
+        Z3B --> Z3C[Pod Mount]
     end
 
-    subgraph Z4["⚖️ Zone 4: Governance"]
-        Z4A[Azure Policy] --> Z4B[OPA Gatekeeper]
-        Z4B --> Z4C[Defender for Containers]
+    subgraph Z4["Zone 4: Governance"]
+        Z4A[Azure Policy] --> Z4B[Gatekeeper]
+        Z4B --> Z4C[Defender]
     end
 
-    subgraph Z5["🔬 Zone 5: Runtime Validation"]
-        Z5A[Smoke Tests] --> Z5B[OWASP ZAP DAST]
+    subgraph Z5["Zone 5: Runtime"]
+        Z5A[Smoke Tests] --> Z5B[OWASP ZAP]
     end
 
     Z1 --> Z2 --> Z3 --> Z4 --> Z5
 
-    style Z1 fill:#3498db,stroke:#2980b9,color:#fff
-    style Z2 fill:#9b59b6,stroke:#8e44ad,color:#fff
-    style Z3 fill:#2ecc71,stroke:#27ae60,color:#fff
-    style Z4 fill:#e74c3c,stroke:#c0392b,color:#fff
-    style Z5 fill:#f39c12,stroke:#d68910,color:#fff
+    style Z1 fill:#3498db,color:#fff
+    style Z2 fill:#9b59b6,color:#fff
+    style Z3 fill:#2ecc71,color:#fff
+    style Z4 fill:#e74c3c,color:#fff
+    style Z5 fill:#f39c12,color:#fff
 ```
 
 ---
@@ -120,36 +115,36 @@ graph TB
 
 ```mermaid
 graph TB
-    subgraph AKS["☸️ AKS Cluster: aks-devsecops-prod"]
-        subgraph NS["📦 default namespace"]
-            SVC["🌐 Service<br/>sample-app:80"]
-            DEP["📋 Deployment<br/>sample-app"]
-            POD["🐳 Pod<br/>sample-app-xxx"]
-            VOL["🔐 /mnt/secrets-store<br/><i>CSI Volume</i>"]
+    subgraph AKS["AKS Cluster"]
+        subgraph NS["default namespace"]
+            SVC[Service: sample-app]
+            DEP[Deployment]
+            POD[Pod]
+            VOL[/mnt/secrets-store]
 
             SVC --> POD
             DEP --> POD
             POD --> VOL
         end
 
-        subgraph GK["⚖️ gatekeeper-system"]
-            WEBHOOK["🛑 Admission Webhook<br/><i>Policy Enforcement</i>"]
+        subgraph GK["gatekeeper-system"]
+            WEBHOOK[Admission Webhook]
         end
     end
 
-    subgraph Azure["☁️ Azure Services"]
-        KV["🔑 Key Vault<br/>kvshrinet82prod"]
-        ACR["📦 Container Registry<br/>acrshrinet82prod"]
+    subgraph Azure["Azure Services"]
+        KV[Key Vault]
+        ACR[Container Registry]
     end
 
-    KV -->|"Secrets Store CSI"| VOL
-    ACR -->|"Pull Image"| POD
-    WEBHOOK -->|"Validate Pod"| POD
+    KV -->|CSI Driver| VOL
+    ACR -->|Pull Image| POD
+    WEBHOOK -->|Validate| POD
 
-    style AKS fill:#326ce5,stroke:#2854a0,color:#fff
-    style KV fill:#2ecc71,stroke:#27ae60,color:#fff
-    style ACR fill:#3498db,stroke:#2980b9,color:#fff
-    style WEBHOOK fill:#e74c3c,stroke:#c0392b,color:#fff
+    style AKS fill:#326ce5,color:#fff
+    style KV fill:#2ecc71,color:#fff
+    style ACR fill:#3498db,color:#fff
+    style WEBHOOK fill:#e74c3c,color:#fff
 ```
 
 ---
