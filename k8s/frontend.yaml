@@ -16,6 +16,7 @@ spec:
         runAsUser: 101
         runAsGroup: 101
         fsGroup: 101
+        supplementalGroups: [101]
         seccompProfile:
           type: RuntimeDefault
       containers:
