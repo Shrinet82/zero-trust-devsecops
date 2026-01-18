@@ -74,7 +74,7 @@ flowchart LR
 
 ```mermaid
 graph TB
-    subgraph Z1["Zone 1: Secure Supply Chain"]
+    subgraph Z1["Zone 1: Supply Chain"]
         Z1A[GitHub] --> Z1B[VMSS Agents]
         Z1B --> Z1C[Gitleaks + Checkov]
         Z1C --> Z1D[Trivy Scan]
@@ -117,10 +117,10 @@ graph TB
 graph TB
     subgraph AKS["AKS Cluster"]
         subgraph NS["default namespace"]
-            SVC[Service: sample-app]
-            DEP[Deployment]
-            POD[Pod]
-            VOL[/mnt/secrets-store]
+            SVC["Service: sample-app"]
+            DEP["Deployment"]
+            POD["Pod"]
+            VOL["Secrets Volume"]
 
             SVC --> POD
             DEP --> POD
@@ -128,13 +128,13 @@ graph TB
         end
 
         subgraph GK["gatekeeper-system"]
-            WEBHOOK[Admission Webhook]
+            WEBHOOK["Admission Webhook"]
         end
     end
 
     subgraph Azure["Azure Services"]
-        KV[Key Vault]
-        ACR[Container Registry]
+        KV["Key Vault"]
+        ACR["Container Registry"]
     end
 
     KV -->|CSI Driver| VOL
