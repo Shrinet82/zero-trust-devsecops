@@ -22,7 +22,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: redis
-          image: bitnami/redis:7.2
+          image: bitnami/redis:latest
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
