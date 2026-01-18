@@ -111,20 +111,20 @@ graph TB
 
 ---
 
-## ☸️ Kubernetes Architecture
+## ☸️ Three-Tier Chat Application
+
+> **Use Case**: Real-time WebSocket chat with React frontend, Flask-SocketIO backend, and Redis cache.
 
 ```mermaid
 graph TB
     subgraph AKS["AKS Cluster"]
         subgraph NS["default namespace"]
-            SVC["Service: sample-app"]
-            DEP["Deployment"]
-            POD["Pod"]
-            VOL["Secrets Volume"]
+            FE["chat-frontend<br/>React + Nginx"]
+            BE["chat-backend<br/>Flask-SocketIO"]
+            RD["redis<br/>StatefulSet + PVC"]
 
-            SVC --> POD
-            DEP --> POD
-            POD --> VOL
+            FE -->|WebSocket Proxy| BE
+            BE -->|Pub/Sub| RD
         end
 
         subgraph GK["gatekeeper-system"]
@@ -135,17 +135,28 @@ graph TB
     subgraph Azure["Azure Services"]
         KV["Key Vault"]
         ACR["Container Registry"]
+        LB["Load Balancer"]
     end
 
-    KV -->|CSI Driver| VOL
-    ACR -->|Pull Image| POD
-    WEBHOOK -->|Validate| POD
+    LB -->|Port 80| FE
+    ACR -->|Pull Images| BE
+    ACR -->|Pull Images| FE
+    WEBHOOK -->|Validate| BE
+    WEBHOOK -->|Validate| FE
 
     style AKS fill:#326ce5,color:#fff
-    style KV fill:#2ecc71,color:#fff
-    style ACR fill:#3498db,color:#fff
-    style WEBHOOK fill:#e74c3c,color:#fff
+    style FE fill:#61dafb,color:#000
+    style BE fill:#3776ab,color:#fff
+    style RD fill:#dc382d,color:#fff
 ```
+
+### Application Components
+
+| Component    | Technology      | Port | Purpose                        |
+| ------------ | --------------- | ---- | ------------------------------ |
+| **Frontend** | React + Nginx   | 8080 | Chat UI with WebSocket client  |
+| **Backend**  | Flask-SocketIO  | 5000 | Real-time messaging API        |
+| **Cache**    | Redis (Bitnami) | 6379 | Message broker + session store |
 
 ---
 
