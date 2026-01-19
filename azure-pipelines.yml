@@ -24,8 +24,16 @@ stages:
               wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
               tar -xzf gitleaks_8.18.2_linux_x64.tar.gz
               sudo mv gitleaks /usr/local/bin/
+              gitleaks detect --source . -v --report-format json --report-path gitleaks-report.json || true
               gitleaks detect --source . -v
             displayName: "Run Gitleaks"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Gitleaks Report"
+            condition: always()
+            inputs:
+              pathToPublish: "gitleaks-report.json"
+              artifactName: "security-artifacts"
 
       - job: IaCScan
         displayName: "IaC Scan (Checkov)"
@@ -39,8 +47,16 @@ stages:
               done
               pip3 install checkov
               export PATH=$HOME/.local/bin:$PATH
-              checkov -d k8s/ --framework kubernetes --soft-fail
+              checkov -d k8s/ --framework kubernetes -o json > checkov-report.json || true
+              checkov -d k8s/ --framework kubernetes
             displayName: "Run Checkov"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Checkov Report"
+            condition: always()
+            inputs:
+              pathToPublish: "checkov-report.json"
+              artifactName: "security-artifacts"
 
   # -------------------------------------------------------------------------
   # STAGE 2: APP QUALITY
@@ -118,8 +134,18 @@ stages:
 
           - script: |
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-              trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(backendImage):$(tag) || true
+              trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(backendImage):$(tag)
             displayName: "Trivy Scan Backend"
+
+          - script: |
+              trivy image --format cyclonedx -o backend-sbom.json $(azureContainerRegistry)/$(backendImage):$(tag)
+            displayName: "Generate Backend SBOM"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Backend SBOM"
+            inputs:
+              pathToPublish: "backend-sbom.json"
+              artifactName: "security-artifacts"
 
       - job: BuildFrontend
         displayName: "Build Frontend Image"
@@ -148,8 +174,18 @@ stages:
 
           - script: |
               curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-              trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(frontendImage):$(tag) || true
+              trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(frontendImage):$(tag)
             displayName: "Trivy Scan Frontend"
+
+          - script: |
+              trivy image --format cyclonedx -o frontend-sbom.json $(azureContainerRegistry)/$(frontendImage):$(tag)
+            displayName: "Generate Frontend SBOM"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish Frontend SBOM"
+            inputs:
+              pathToPublish: "frontend-sbom.json"
+              artifactName: "security-artifacts"
 
   # -------------------------------------------------------------------------
   # STAGE 4: DELIVERY
@@ -266,3 +302,56 @@ stages:
 
                 echo "Frontend LoadBalancer IP:"
                 kubectl get svc chat-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+
+      - job: DAST
+        displayName: "DAST (OWASP ZAP)"
+        dependsOn: SmokeTest
+        pool:
+          name: "VMSS-Pool"
+        steps:
+          - script: |
+              for i in {1..10}; do
+                if sudo apt-get update && sudo apt-get install -y azure-cli; then break; fi
+                sleep 10
+              done
+              sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+              sudo install kubectl /usr/local/bin/kubectl
+              wget -q https://github.com/Azure/kubelogin/releases/download/v0.0.30/kubelogin-linux-amd64.zip
+              unzip -o kubelogin-linux-amd64.zip
+              sudo mv bin/linux_amd64/kubelogin /usr/local/bin/
+            displayName: "Install CLI Tools"
+
+          - task: AzureCLI@2
+            displayName: "Run OWASP ZAP"
+            inputs:
+              azureSubscription: $(azureServiceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials -g rg-devsecops-prod -n aks-devsecops-prod
+                kubelogin convert-kubeconfig -l azurecli
+
+                # Get frontend IP
+                FRONTEND_IP=$(kubectl get svc chat-frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                echo "Target: http://$FRONTEND_IP"
+
+                # Create work directory for ZAP
+                mkdir -p zap-work
+                chmod 777 zap-work
+
+                # Run OWASP ZAP baseline scan
+                docker run --rm -v $(pwd)/zap-work:/zap/wrk:rw \
+                  ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+                  -t http://$FRONTEND_IP \
+                  -r zap_report.html \
+                  -I || true
+
+                # Copy report to accessible location
+                cp zap-work/zap_report.html . || echo "ZAP report not found"
+
+          - task: PublishBuildArtifacts@1
+            displayName: "Publish ZAP Report"
+            condition: always()
+            inputs:
+              pathToPublish: "zap-work/zap_report.html"
+              artifactName: "security-artifacts"
