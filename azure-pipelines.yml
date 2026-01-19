@@ -134,7 +134,7 @@ stages:
                 docker push $(azureContainerRegistry)/$(backendImage):latest
 
           - script: |
-              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
               trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(backendImage):$(tag)
             displayName: "Trivy Scan Backend"
 
@@ -174,7 +174,7 @@ stages:
                 docker push $(azureContainerRegistry)/$(frontendImage):latest
 
           - script: |
-              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+              curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
               trivy image --exit-code 1 --severity CRITICAL $(azureContainerRegistry)/$(frontendImage):$(tag)
             displayName: "Trivy Scan Frontend"
 
