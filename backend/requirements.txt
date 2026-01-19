@@ -1,3 +1,6 @@
 flask
 flask_cors
 flask_socketio
+# Security fixes for CVEs
+h11>=0.16.0  # CVE-2025-43859
+httpx>=0.23.0  # CVE-2021-41945
