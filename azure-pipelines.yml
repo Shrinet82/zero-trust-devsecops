@@ -312,7 +312,7 @@ stages:
         steps:
           - script: |
               for i in {1..10}; do
-                if sudo apt-get update && sudo apt-get install -y azure-cli; then break; fi
+                if sudo apt-get update && sudo apt-get install -y azure-cli unzip; then break; fi
                 sleep 10
               done
               sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
