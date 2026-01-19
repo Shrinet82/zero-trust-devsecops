@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Install additional dependencies
 RUN pip install --no-cache-dir redis googletrans==4.0.0-rc1
 
+# Force upgrade vulnerable packages to fix CVEs
+RUN pip install --no-cache-dir --upgrade "h11>=0.16.0" "httpx>=0.23.0"
+
 COPY . .
 
 # Create non-root user
