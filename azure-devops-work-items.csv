@@ -1,0 +1,21 @@
+Work Item Type,Title,Description,Priority,Tags
+Epic,Zero-Trust Chat App Platform,"Build a production-ready three-tier real-time chat application with DevSecOps pipeline",1,devsecops;chat-app
+Issue,Three-Tier Architecture,"Implement React frontend Flask backend and Redis cache",1,architecture
+Issue,5-Stage Security Pipeline,"Implement Security Gates App Quality Build Factory Delivery and Verification stages",1,pipeline;security
+Issue,Zero-Trust Security Controls,"Implement OIDC Key Vault CSI Gatekeeper policies and DAST scanning",1,zero-trust;security
+Issue,Frontend - React Chat UI,"Real-time chat interface with nickname selection and theme customization",2,frontend
+Issue,Backend - Flask-SocketIO API,"WebSocket-based real-time messaging with Redis pub/sub",2,backend
+Issue,Redis StatefulSet,"Persistent Redis cache with PVC for message storage",2,infrastructure
+Issue,Gitleaks Secret Scanning,"All commits scanned for hardcoded secrets",2,security;shift-left
+Issue,Checkov IaC Scanning,"Kubernetes manifests validated for best practices",2,security;shift-left
+Issue,Trivy Container Scanning,"All container images scanned for CVEs",2,security;build
+Issue,OWASP ZAP DAST,"Runtime security testing of deployed application",2,security;dast
+Issue,Key Vault CSI Driver,"Secrets injected into pods without environment variables",2,security;secrets
+Issue,Azure Policy Compliance,"Pods enforced with Restricted Pod Security Standard",2,governance
+Issue,Frontend Nginx Fix,"Switch to nginx-unprivileged for non-root operation",1,bugfix;frontend
+Issue,Redis Image Fix,"bitnami/redis tag fixed to latest",2,bugfix;redis
+Task,Configure VMSS Agent Pool,"Set up self-hosted VMSS agents for pipeline execution",3,infrastructure
+Task,Create ACR and Push Images,"Build and push frontend/backend images to Azure Container Registry",3,build
+Task,Deploy to AKS,"Deploy all three tiers to Azure Kubernetes Service",3,delivery
+Task,Scale AKS Nodepool,"Scale default nodepool to 2 nodes for capacity",3,infrastructure
+Task,Add supplementalGroups to manifests,"Fix Azure Policy admission for Redis and Frontend pods",3,bugfix
