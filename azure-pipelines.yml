@@ -24,8 +24,8 @@ stages:
               wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.18.2/gitleaks_8.18.2_linux_x64.tar.gz
               tar -xzf gitleaks_8.18.2_linux_x64.tar.gz
               sudo mv gitleaks /usr/local/bin/
-              gitleaks detect --source . -v --report-format json --report-path gitleaks-report.json || true
-              gitleaks detect --source . -v
+              gitleaks detect --source . -v --config .gitleaks.toml --report-format json --report-path gitleaks-report.json || true
+              gitleaks detect --source . -v --config .gitleaks.toml
             displayName: "Run Gitleaks"
 
           - task: PublishBuildArtifacts@1

@@ -1,0 +1,10 @@
+# Gitleaks Configuration
+# Allow certain false positives that are not actual secrets
+
+title = "Gitleaks Config"
+
+[allowlist]
+  description = "Allow non-secret resource names"
+  paths = [
+    '''k8s/secretproviderclass\.yaml''',
+  ]
