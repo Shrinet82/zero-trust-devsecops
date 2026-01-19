@@ -124,11 +124,11 @@ export default function Chat() {
           <input
             className="input_chat"
             type="text"
-            placeholder="Сообщение"
+            placeholder="Message"
             disabled
           />
           <p className="users_paragraph">
-            Пользователей на сайте - {countData}
+            Users online - {countData}
           </p>
         </div>
       );
@@ -142,13 +142,13 @@ export default function Chat() {
               onChange={setInputValue}
               onEnter={(text: string) => setInputValue(text)}
               onKeyDown={handleKeyDown}
-              placeholder="Введите сообщение"
+              placeholder="Type a message"
               shouldReturn={false}
               shouldConvertEmojiToImage={false}
             />
           </div>
           <p className="users_paragraph">
-            Пользователей на сайте - {countData}
+            Users online - {countData}
           </p>
         </div>
       );
@@ -158,7 +158,7 @@ export default function Chat() {
     if (!localStorage.hasOwnProperty("nickname") || localStorage.length === 0) {
       return (
         <Alert variant="outlined" severity="error">
-          Вы не ввели никнейм!
+          Please enter a nickname!
         </Alert>
       );
     }

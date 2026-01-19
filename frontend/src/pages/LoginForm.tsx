@@ -36,8 +36,8 @@ export default function LoginForm() {
             {progressBar ? (
                 <div>
                     <form onSubmit={handleSubmit(onSubmit)}>
-                        <input {...register("nickname")} defaultValue="Никнейм" required />
-                        <input type="submit" value="Подтвердить" />
+                        <input {...register("nickname")} defaultValue="Nickname" required />
+                        <input type="submit" value="Join Chat" />
                     </form>
                     <Particles
                         id="tsparticles"
